@@ -1,5 +1,6 @@
 #include "QInt.h"
 #include <algorithm>
+#include <list>
 using namespace std;
 
 /// <summary>
@@ -359,3 +360,107 @@ QInt QInt::operator -- ()
 	return *this;
 }
 
+/// <summary>
+/// Operator hai ngoi >, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator > (const QInt & other) const
+{
+	if (this->GetBit(qSize - 1) == false && other.GetBit(qSize - 1) == true)
+		return true;
+	if (this->GetBit(qSize - 1) == true && other.GetBit(qSize - 1) == false)
+		return false;
+	for (int i = 3; i >= 0; i--)
+		if (this->box[i] > other.box[i]) 
+			return true;
+	return false;
+}
+
+/// <summary>
+/// Operator hai ngoi <, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator < (const QInt & other) const
+{
+	return other > *this;
+}
+
+/// <summary>
+/// Operator hai ngoi >=, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator >= (const QInt & other) const
+{
+	return !(other > *this);
+}
+
+/// <summary>
+/// Operator hai ngoi <=, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator <= (const QInt &other) const
+{
+	return !(*this > other);
+}
+
+/// <summary>
+/// Operator hai ngoi ==, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator == (const QInt &other) const
+{
+	for (int i = 0; i < 4; i++)
+		if (this->box[i] != other.box[i]) return false;
+	return true;
+}
+
+/// <summary>
+/// Operator hai ngoi !=, thuc hien so sanh giua hai so QInt
+/// <summary>
+/// <param name = "other"> So QInt thu hai </param>
+/// <returns> Ket qua phep so sanh </returns>
+bool QInt::operator != (const QInt &other) const
+{
+	return !(*this == other);
+}
+
+/// <summary>
+/// Ham xuat mot so QInt ra stream.
+/// </summary>
+/// <param name = "val"> So QInt can xuat </param>
+/// <param name = "outf"> Stream output </param>
+void PrintQInt(const QInt & val, ofstream & outf)
+{
+	if (val == QInt(0))
+	{
+		outf << 0;
+		return;
+	}
+	if (val < QInt(0)) // Truong hop val < 0
+	{
+		outf << '-';
+		PrintQInt(-val, outf);
+		return;
+	}
+	QInt zero;
+	QInt ten(10);
+	QInt tmp = val;
+	list<char> res;
+	while (tmp > zero)
+	{
+		QInt div, mod;	
+		tmp.Divide(ten, div, mod); // Mod luon < 10.
+		res.push_front(mod.box[0] + 48); // Doi sang kieu ki tu.
+		tmp = div;
+	}
+	while (!res.empty()) // Xuat ket qua.
+	{
+		outf << res.front();
+		res.pop_front();
+	}
+}
