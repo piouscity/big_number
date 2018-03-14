@@ -3,10 +3,16 @@
 #ifndef qSize
 #define qSize 128
 #endif
+
+#ifndef boxSize
+#define boxSize 32
+#endif
+
 class QInt
 {
 private:
-	uint32_t bytes[4];
+	uint32_t box[4];
+	void Divide(const QInt &, QInt &, QInt &) const;
 public:
 	QInt();
 	QInt(const bool *);	
@@ -28,7 +34,7 @@ public:
 	QInt operator ~ () const;	
 	QInt operator - () const;
 	QInt operator ++();
-	QInt operator --();
+	QInt operator --();	
 };
 
 void ScanQInt(QInt &);
