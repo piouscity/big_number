@@ -372,8 +372,8 @@ bool QInt::operator > (const QInt & other) const
 	if (this->GetBit(qSize - 1) == true && other.GetBit(qSize - 1) == false)
 		return false;
 	for (int i = 3; i >= 0; i--)
-		if (this->box[i] > other.box[i]) 
-			return true;
+		if (this->box[i] != other.box[i])
+			return this->box[i] > other.box[i];
 	return false;
 }
 
