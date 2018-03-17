@@ -40,6 +40,11 @@ QInt::QInt(const string &str) : QInt()
 	QInt ten(10);
 	for (int i = (int)str.size() - 1; i >= 0; i--)
 	{
+		if (str[i] == '-')
+		{
+			*this = -*this;
+			break;
+		}
 		int ch = str[i] - '0';
 		*this = (*this) + tmp * QInt(ch);
 		tmp = tmp * ten;
