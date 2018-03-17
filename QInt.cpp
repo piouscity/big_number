@@ -13,31 +13,37 @@ QInt::QInt()
 }
 
 /// <summary>
-/// Constructor khoi tao so QInt tu day nhi phan.
-/// </summary>
-/// <param name = "bit"> Day nhi phan noi tren </param>
-QInt::QInt(const bool * bit)
-{
-	for (int i = 0; i < qSize; i++)
-		SetBit(i, bit[i]);
-}
-
-/// <summary>
 /// Constructor khoi tao so QInt tu mot so int.
 /// </summary>
 /// <param name = "val"> So int duoc cho </param>
 QInt::QInt(int val)
 {
-	box[0] = val;	
-	for (int i = 1; i < 4; i++) 
+	box[0] = val;
+	for (int i = 1; i < 4; i++)
 		if (val < 0) // MSB = 1
 		{
 			box[i] = -1; // -1 = 1111 1111 1111 1111 	
 		}
-		else 
+		else
 		{
 			box[i] = 0;
 		}
+}
+
+/// <summary>
+/// Constructor khoi tao so QInt tu mot xau
+/// <summary>
+/// <param name = "str"> Xau chua so can khoi tao </param>
+QInt::QInt(const string &str) : QInt()
+{
+	QInt tmp(1);
+	QInt ten(10);
+	for (int i = (int)str.size() - 1; i >= 0; i--)
+	{
+		int ch = str[i] - '0';
+		*this = (*this) + tmp * QInt(ch);
+		tmp = tmp * ten;
+	}
 }
 
 /// <summary>
@@ -82,10 +88,10 @@ void QInt::ChangeBit(int pos)
 QInt QInt::operator >> (int shamt) const
 {
 	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-	// Thay vi dich so QInt sang phai shamt lan, ta phan
-	// tich shamt = 32 * p + q.
-	// Nhu vay, box thu i se nhan gia tri cua box thu i + p, sau do dich phai them q lan nua.
-	int p = shamt >> 5; 
+									   // Thay vi dich so QInt sang phai shamt lan, ta phan
+									   // tich shamt = 32 * p + q.
+									   // Nhu vay, box thu i se nhan gia tri cua box thu i + p, sau do dich phai them q lan nua.
+	int p = shamt >> 5;
 	int q = shamt & ((1 << 5) - 1);
 	QInt res;
 	for (int i = 0; i + p < 4; i++) // box thu i nhan gia tri cua box thu i + p.
@@ -107,7 +113,7 @@ QInt QInt::operator >> (int shamt) const
 QInt QInt::operator << (int shamt) const
 {
 	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-	// Cach dich tuong tu operator >> 
+									   // Cach dich tuong tu operator >> 
 	int p = shamt >> 5;
 	int q = shamt & ((1 << 5) - 1);
 	QInt res;
@@ -209,7 +215,7 @@ QInt QInt::operator + (const QInt &other) const
 	QInt res;
 	bool carry = false;
 	for (int i = 0; i < 4; i++)
-	{		
+	{
 		res.box[i] = this->box[i] + other.box[i] + carry; // Cong tung box.
 		if ((other.box[i] || carry) == 0) // Ca 2 so = 0
 			carry = 0;
@@ -284,7 +290,7 @@ QInt QInt::operator / (const QInt &other) const
 /// <param name = "div"> Ket qua cua phep chia </param>
 /// <param name = "mod"> So du cua phep chia </param>
 void QInt::Divide(const QInt & other, QInt & div, QInt & mod) const
-{	
+{
 	mod = QInt(0);
 	div = *this;
 	QInt M = other;
@@ -372,8 +378,8 @@ bool QInt::operator > (const QInt & other) const
 	if (this->GetBit(qSize - 1) == true && other.GetBit(qSize - 1) == false)
 		return false;
 	for (int i = 3; i >= 0; i--)
-		if (this->box[i] > other.box[i]) 
-			return true;
+		if (this->box[i] != other.box[i])
+			return this->box[i] > other.box[i];
 	return false;
 }
 
@@ -432,28 +438,27 @@ bool QInt::operator != (const QInt &other) const
 /// <summary>
 /// Ham xuat mot so QInt ra stream.
 /// </summary>
-/// <param name = "val"> So QInt can xuat </param>
 /// <param name = "outf"> Stream output </param>
-void PrintQInt(const QInt & val, ofstream & outf)
+void QInt::Print(ofstream & outf)
 {
-	if (val == QInt(0))
+	if (*this == QInt(0))
 	{
 		outf << 0;
 		return;
 	}
-	if (val < QInt(0)) // Truong hop val < 0
+	if (*this < QInt(0)) // Truong hop val < 0
 	{
 		outf << '-';
-		PrintQInt(-val, outf);
+		(-*this).Print(outf);
 		return;
 	}
 	QInt zero;
 	QInt ten(10);
-	QInt tmp = val;
+	QInt tmp = *this;
 	list<char> res;
 	while (tmp > zero)
 	{
-		QInt div, mod;	
+		QInt div, mod;
 		tmp.Divide(ten, div, mod); // Mod luon < 10.
 		res.push_front(mod.box[0] + 48); // Doi sang kieu ki tu.
 		tmp = div;
@@ -463,4 +468,131 @@ void PrintQInt(const QInt & val, ofstream & outf)
 		outf << res.front();
 		res.pop_front();
 	}
+}
+
+/// <summary>
+/// Ham trich du lieu tu so QInt sang mang 7 phan tu 2 byte va mot so nguyen 2 byte.
+/// <summary>
+/// <param name = base> Mang 7 phan tu neu tren </param>
+/// <param name = "extend"> So nguyen 2 byte neu tren </param>
+void QInt::Expor(uint16_t * base, uint16_t & extend)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		base[2 * i] = (box[i] << 16) >> 16; // Copy 16 bit dau.
+		if (i < 3)
+			base[2 * i + 1] = box[i] >> 16; // Copy 16 bit sau.
+		else
+			extend = box[i] >> 16;
+	}
+}
+
+/// <summary>
+/// Ham khoi tao mot so QInt tu mot day nhi phan
+/// <summary>
+/// <param name = "digits"> Day nhi phan duoc cho </param>
+/// <returns> So QInt sau khi khoi tao </returns>
+/// Throw exception neu nhu do dai day nhi phan qua gioi han
+QInt QInt::FromBin(const string & digits)
+{
+	if ((int)digits.size() > qSize)
+		throw _SIZE_EXCEEDED;
+	string bit(digits.rbegin(), digits.rend());
+	QInt res;
+	for (int i = 0; i < (int)bit.size(); i++)
+		res.SetBit(i, bit[i] - '0');
+	return res;
+}
+
+/// <summary>
+/// Ham khoi tao mot so QInt tu mot day hexa
+/// <summary>
+/// <param name = "digits"> Day hexa duoc cho </param>
+/// <returns> So QInt sau khi khoi tao </returns>
+/// Throw exception neu nhu do dai day nhi phan qua gioi han
+QInt QInt::FromHex(const string & digits)
+{
+	if ((int)digits.size() > hSize)
+		throw _SIZE_EXCEEDED;
+	string hex(digits.rbegin(), digits.rend());
+	QInt res;
+	uint32_t tmp = 0;
+	// Cu 8 ki tu hexa thi tao thanh mot so nguyen 32 bits.
+	// Gom nhom 8 ki tu, tinh gia tri vao bien tam sau do gan vao so QInt.
+	for (int i = 0; i < hSize; i++)
+	{
+		uint32_t val;
+		if (i < (int)hex.size())
+		{
+			val = hex[i] <= '9' ? hex[i] - '0' : hex[i] - 'A' + 10;
+		}
+		else val = 0;
+		tmp |= val << ((i & ((1 << 3) - 1)) << 2); // val << ((i % 8) * 4)
+		if ((i & ((1 << 3) - 1)) == 7) // i % 8 = 7
+		{
+			res.box[i >> 3] = tmp;
+			tmp = 0;
+		}			
+	}
+	return res;
+}
+
+/// <summary>
+/// Ham doi mot so QInt sang mot xau nhi phan
+/// <summary>
+/// <returns> Xau nhi phan sau khi doi </returns>
+string QInt::ToBin() const
+{
+	string res;
+	for (int i = 0; i < qSize; i++) res += this->GetBit(i) + '0';
+	while (res.size() > 1 && res.back() == '0') res.pop_back();
+	reverse(res.begin(), res.end());
+	return res;
+}
+
+/// <summary>
+/// Ham doi mot so QInt sang mot xau hexa.
+/// <summary>
+/// <returns> Xau hexa sau khi doi </returns>
+string QInt::ToHex() const
+{
+	string res;
+	for (int i = 0; i < 4; i++) // Lay tung so nguyen 32 bits thanh phan.
+	{
+		uint32_t val = this->box[i];
+		for (int j = 0; j < 8; j++) // So nguyen 32 bits nay chua 8 ki tu hexa.
+		{
+			int tmp = val & ((1 << 4) - 1); // Mod 16 lay ra gia tri cua ki tu hexa.
+			if (tmp < 10)
+				res += tmp + '0';
+			else
+				res += tmp - 10 + 'A';
+			val >>= 4;
+		}
+	}
+	while (res.size() > 1 && res.back() == '0') res.pop_back();
+	reverse(res.begin(), res.end());
+	return res;
+}
+
+/// <summary>
+/// Ham dich bit logic so QInt sang phai.
+/// </summary>
+/// <param name = "shamt"> So bit can phai dich </param>
+/// <returns> So QInt sau khi dich </returns>
+QInt QInt::operator >> (const QInt &shamt) const
+{
+	if (shamt >= QInt(32)) return QInt(0);
+	return (*this) >> shamt.box[0];
+}
+
+/// <summary>
+/// Ham dich bit logic so QInt sang trai.
+/// </summary>
+/// <param name = "shamt"> So bit can dich </param>
+/// <returns> So QInt sau khi dich </returns>
+QInt QInt::operator << (const QInt &shamt) const
+{
+	if (shamt >= QInt(32)) return QInt(0);
+	return (*this) << shamt.box[0];
 }
