@@ -10,6 +10,18 @@
 #define boxSize 32
 #endif
 
+#ifndef _DIVIDE_BY_ZERO
+#define _DIVIDE_BY_ZERO -1
+#endif
+
+#ifndef _SIZE_EXCEEDED
+#define _SIZE_EXCEEDED -2
+#endif
+
+#ifndef hSize
+#define hSize 32
+#endif
+
 using namespace std;
 
 class QInt
@@ -19,8 +31,8 @@ private:
 	void Divide(const QInt &, QInt &, QInt &) const;
 public:
 	QInt();
-	QInt(const bool *);	
 	QInt(int);
+	QInt(const string &);
 	bool GetBit(int) const;
 	void SetBit(int, bool);
 	void ChangeBit(int);
@@ -44,13 +56,13 @@ public:
 	bool operator >= (const QInt &) const;
 	bool operator <= (const QInt &) const;
 	bool operator == (const QInt &) const;
-	bool operator != (const QInt &) const;
-	friend void PrintQInt(const QInt &, ofstream &);
+	bool operator != (const QInt &) const;	
+	void Expor(uint16_t *, uint16_t &);
+	static QInt FromBin(const string &);
+	static QInt FromHex(const string &);
+	string ToHex() const;
+	string ToBin() const;
+	void Print(ofstream &);
+	QInt operator >> (const QInt &) const;
+	QInt operator << (const QInt &) const;
 };
-
-void ScanQInt(QInt &);
-
-bool * DecToBin(const QInt &);
-QInt BinToDec(const bool *);
-char * BinToHex(const bool *);
-char * DecToHex(const QInt &);
