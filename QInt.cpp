@@ -481,3 +481,127 @@ void QInt::Expor(uint16_t * base, uint16_t & extend)
 			extend = box[i] >> 16;
 	}
 }
+
+/// <summary>
+/// Chuyen doi so QInt thap phan thanh so nhi phan
+/// </summary>
+/// <param name = "val"> So QInt can chuyen doi </param>
+/// <returns> So nhi phan sau khi chuyen doi </returns>
+string DecToBin(const QInt &val)
+{
+	string result = "";
+
+	for (int i = 0; i < qSize; i++)
+	{
+		result = result + char(val.GetBit(i) + '0');
+	}
+
+	while (result.size() > 1 && result.back() == '0')
+	{
+		result.pop_back();
+	}
+	return result;
+}
+
+/// <summary>
+/// Chuyen doi so nhi phan thanh so QInt thap phan
+/// </summary>
+/// <returns> So QInt thap phan sau khi chuyen doi </returns>
+/// Throw exception neu do dai cua day nhi phan qua gioi han
+QInt BinToDec(const string &bit)
+{
+	if (bit.size() > qSize)
+		throw _SIZE_EXCEEDED;
+	QInt result;
+	int length = bit.size();
+	for (int i = 0; i < length; i++)
+	{
+		result.SetBit(i, bit[i] - '0');
+	}
+
+	return result;
+}
+
+/// <summary>
+/// Chuyen doi day nhi phan thanh so thap luc phan
+/// </summary>
+/// <returns> So thap luc phan sau khi chuyen doi </returns>
+/// Throw exception neu do dai cua day nhi phan qua gioi han
+string BinToHex(const string &bit)
+{		
+	if ((int)bit.size() > qSize)
+		throw _SIZE_EXCEEDED;
+	string result = "";
+
+	int num = 0;
+	for (int i = 0, j = 0; i < (int)bit.size(); i++)
+	{
+		num += (bit[i] - '0') << j;		
+		if (j == 3 || i + 1 == (int)bit.size()) // Nhom du 4 bit
+		{
+			if (num < 10)
+			{
+				result += char(num + '0');
+			}
+			else
+			{
+				result += char(num - 10 + 'A');
+			}
+			j = num = 0;			
+		}
+		else j++;
+	}	
+	return result;
+}
+
+/// <summary>
+/// Chuyen doi so thap phan QInt thanh so thap luc phan
+/// </summary>
+/// <returns> So thap luc phan sau khi chuyen doi </returns>
+string DecToHex(const QInt &val)
+{
+	string bit = DecToBin(val);
+	string result = BinToHex(bit);
+	return result;
+}
+
+/// <summary>
+/// Chuyen doi so thap luc phan thanh so nhi phan
+/// </summary>
+/// <returns> So nhi phan sau khi chuyen doi </returns>
+/// Throw exception neu do dai cua day nhi phan qua gioi han
+string HexToBin(const string &hexa)
+{	
+	if ((int)hexa.size() > (qSize >> 2))
+		throw _SIZE_EXCEEDED;
+	string bit = "";
+
+	for (int i = 0; i < (int)hexa.size(); i++) // Lay tung chu cai trong hexa.
+	{
+		int num;
+		if (hexa[i] <= '9') num = hexa[i] - '0';
+		else num = hexa[i] - 'A' + 10;
+
+		for (int j = 0; j < 4; j++)
+		{
+			bit += (num & 1) + '0';
+			num >>= 1;
+		}
+	}
+	while (bit.size() > 1 && bit[bit.size() - 1] == '0') bit.pop_back();	
+	return bit;
+}
+
+/// <summary>
+/// Chuyen doi so thap luc phan thanh so QInt thap phan
+/// </summary>
+/// <returns> So QInt thap phan sau khi chuyen doi </returns>
+/// Throw exception neu do dai cua day nhi phan qua gioi han
+QInt HexToDec(const string &hexa)
+{
+	if ((int)hexa.size() > (qSize >> 2))
+		throw _SIZE_EXCEEDED;
+	string bit = HexToBin(hexa);
+	QInt result = BinToDec(bit);
+	return result;
+}
