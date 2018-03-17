@@ -10,6 +10,14 @@
 #define boxSize 32
 #endif
 
+#ifndef _DIVIDE_BY_ZERO
+#define _DIVIDE_BY_ZERO -1
+#endif
+
+#ifndef _SIZE_EXCEEDED
+#define _SIZE_EXCEEDED -2
+#endif
+
 using namespace std;
 
 class QInt
@@ -46,11 +54,14 @@ public:
 	bool operator == (const QInt &) const;
 	bool operator != (const QInt &) const;
 	friend void PrintQInt(const QInt &, ofstream &);
+	void Expor(uint16_t *, uint16_t &);
 };
 
 void ScanQInt(QInt &);
 
-bool * DecToBin(const QInt &);
-QInt BinToDec(const bool *);
-char * BinToHex(const bool *);
-char * DecToHex(const QInt &);
+string DecToBin(const QInt &);
+QInt BinToDec(const string &);
+string BinToHex(const string &);
+string DecToHex(const QInt &);
+QInt HexToDec(const string &);
+string HexToBin(const string &);
