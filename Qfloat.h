@@ -18,4 +18,5 @@ public:
 	bool is_inf() const;
 	bool is_nan() const;
 	Qfloat operator + (const Qfloat&) const;
+	std::string ToBin() const;
 };

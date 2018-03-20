@@ -33,7 +33,7 @@ public:
 	QInt();
 	QInt(int);
 	QInt(const string &);
-	QInt(uint16_t *, uint16_t);
+	QInt(const uint16_t *, uint16_t);
 	bool GetBit(int) const;
 	void SetBit(int, bool);
 	void ChangeBit(int);
