@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <string>
+#include "QInt.h"
 #include "signbias.h"
 
 class Qfloat
@@ -8,6 +9,7 @@ class Qfloat
 private:
 	signbias expo;
 	uint16_t val[7];
+	void normalize(QInt& clone);
 public:
 	Qfloat();
 	Qfloat(const std::string&);
@@ -18,5 +20,8 @@ public:
 	bool is_inf() const;
 	bool is_nan() const;
 	Qfloat operator + (const Qfloat&) const;
+	Qfloat operator - (const Qfloat&) const;
+	Qfloat operator - () const;
+	Qfloat operator * (const Qfloat&) const;
 	std::string ToBin() const;
 };

@@ -20,14 +20,14 @@ QInt::QInt(int val)
 {
 	box[0] = val;
 	for (int i = 1; i < 4; i++)
-	if (val < 0) // MSB = 1
-	{
-		box[i] = -1; // -1 = 1111 1111 1111 1111 	
-	}
-	else
-	{
-		box[i] = 0;
-	}
+		if (val < 0) // MSB = 1
+		{
+			box[i] = -1; // -1 = 1111 1111 1111 1111 	
+		}
+		else
+		{
+			box[i] = 0;
+		}
 }
 
 /// <summary>
@@ -93,9 +93,9 @@ void QInt::ChangeBit(int pos)
 QInt QInt::operator >> (int shamt) const
 {
 	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-	// Thay vi dich so QInt sang phai shamt lan, ta phan
-	// tich shamt = 32 * p + q.
-	// Nhu vay, box thu i se nhan gia tri cua box thu i + p, sau do dich phai them q lan nua.
+									   // Thay vi dich so QInt sang phai shamt lan, ta phan
+									   // tich shamt = 32 * p + q.
+									   // Nhu vay, box thu i se nhan gia tri cua box thu i + p, sau do dich phai them q lan nua.
 	int p = shamt >> 5;
 	int q = shamt & ((1 << 5) - 1);
 	QInt res;
@@ -118,7 +118,7 @@ QInt QInt::operator >> (int shamt) const
 QInt QInt::operator << (int shamt) const
 {
 	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-	// Cach dich tuong tu operator >> 
+									   // Cach dich tuong tu operator >> 
 	int p = shamt >> 5;
 	int q = shamt & ((1 << 5) - 1);
 	QInt res;
@@ -383,8 +383,8 @@ bool QInt::operator > (const QInt & other) const
 	if (this->GetBit(qSize - 1) == true && other.GetBit(qSize - 1) == false)
 		return false;
 	for (int i = 3; i >= 0; i--)
-	if (this->box[i] != other.box[i])
-		return this->box[i] > other.box[i];
+		if (this->box[i] != other.box[i])
+			return this->box[i] > other.box[i];
 	return false;
 }
 
@@ -426,7 +426,7 @@ bool QInt::operator <= (const QInt &other) const
 bool QInt::operator == (const QInt &other) const
 {
 	for (int i = 0; i < 4; i++)
-	if (this->box[i] != other.box[i]) return false;
+		if (this->box[i] != other.box[i]) return false;
 	return true;
 }
 
@@ -648,6 +648,6 @@ QInt QInt::Multiply(const QInt & other) const
 		Q.SetBit(qSize - 1, A.GetBit(0));
 		A = A.AShiftRight(1);
 	}
-	// Lay 128 bit cuoi.
-	return A;
+	
+	return (Q >> 112 | A << 16);
 }

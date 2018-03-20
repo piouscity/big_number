@@ -44,6 +44,7 @@ public:
 	QInt operator + (const QInt &) const;
 	QInt operator - (const QInt &) const;
 	QInt operator * (const QInt &) const;
+	QInt Multiply(const QInt&) const;
 	QInt operator / (const QInt &) const;
 	QInt operator & (const QInt &) const;
 	QInt operator | (const QInt &) const;
