@@ -627,3 +627,27 @@ uint16_t QInt::Expor() const
 {
 	return box[3] >> 16;
 }
+
+/// <summary>
+/// Ham tro giup phep nhan 2 so thuc.
+/// </summary>
+QInt QInt::Multiply(const QInt & other) const
+{
+	QInt A;
+	QInt Q = other;
+	bool P = false;
+	for (int i = 0; i < qSize; i++)
+	{
+		bool prevP = Q.GetBit(0); // Lay LSB cua so Q.
+		if (prevP == false && P == true) // 01.
+			A = A + *this;
+		if (prevP == true && P == false) // 10.
+			A = A - *this;
+		P = prevP; // Shift.
+		Q = Q >> 1;
+		Q.SetBit(qSize - 1, A.GetBit(0));
+		A = A.AShiftRight(1);
+	}
+	// Lay 128 bit cuoi.
+	return A;
+}
