@@ -631,7 +631,7 @@ uint16_t QInt::Expor() const
 /// <summary>
 /// Ham tro giup phep nhan 2 so thuc.
 /// </summary>
-QInt QInt::Multiply(const QInt & other) const
+QInt QInt::Multiply(const QInt & other, QInt& extend) const
 {
 	QInt A;
 	QInt Q = other;
@@ -649,5 +649,6 @@ QInt QInt::Multiply(const QInt & other) const
 		A = A.AShiftRight(1);
 	}
 	
+	extend = Q;
 	return (Q >> 112 | A << 16);
 }

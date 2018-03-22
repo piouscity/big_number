@@ -9,7 +9,6 @@ class Qfloat
 private:
 	signbias expo;
 	uint16_t val[7];
-	void normalize(QInt& clone);
 public:
 	Qfloat();
 	Qfloat(const std::string&);
