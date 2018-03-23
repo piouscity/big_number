@@ -22,6 +22,7 @@ public:
 	Qfloat operator - (const Qfloat&) const;
 	Qfloat operator - () const;
 	Qfloat operator * (const Qfloat&) const;
+	Qfloat operator / (const Qfloat&) const;
 	Qfloat operator << (uint16_t) const;
 	Qfloat operator >> (uint16_t) const;
 	std::string ToBin() const;

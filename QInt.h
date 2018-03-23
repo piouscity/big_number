@@ -53,6 +53,7 @@ public:
 	QInt operator - () const;
 	QInt operator ++();
 	QInt operator --();
+	QInt operator % (const QInt &) const;
 	bool operator > (const QInt &) const;
 	bool operator < (const QInt &) const;
 	bool operator >= (const QInt &) const;
@@ -68,4 +69,5 @@ public:
 	void Print(ofstream &);
 	QInt operator >> (const QInt &) const;
 	QInt operator << (const QInt &) const;
+	bool Divide(const QInt &);
 };

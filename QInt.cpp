@@ -47,7 +47,7 @@ QInt::QInt(const string &str) : QInt()
 		}
 		int ch = str[i] - '0';
 		*this = (*this) + tmp * QInt(ch);
-		tmp = tmp * ten;
+		tmp = (tmp << 3) + (tmp << 1);
 	}
 }
 
@@ -651,4 +651,23 @@ QInt QInt::Multiply(const QInt & other, QInt& extend) const
 	
 	extend = Q;
 	return (Q >> 112 | A << 16);
+}
+
+bool QInt::Divide(const QInt & other)
+{
+	*this = *this << 1;
+	bool res = 0;
+	if (*this >= other)
+	{
+		res = 1;
+		*this = *this - other;
+	}
+	return res;
+}
+
+QInt QInt::operator % (const QInt & other) const
+{
+	QInt div, mod;
+	this->Divide(other, div, mod);
+	return mod;
 }
