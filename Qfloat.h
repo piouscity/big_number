@@ -12,6 +12,7 @@ private:
 public:
 	Qfloat();
 	Qfloat(const std::string&);
+	static Qfloat FromDec(const string &);
 	void set_inf(bool neg);
 	void set_nan();
 	void set_zero();
@@ -25,5 +26,10 @@ public:
 	Qfloat operator / (const Qfloat&) const;
 	Qfloat operator << (uint16_t) const;
 	Qfloat operator >> (uint16_t) const;
+	bool operator < (const Qfloat&) const;
 	std::string ToBin() const;
+	string ToDec() const;
 };
+
+const Qfloat naturalDigits[10] =
+{ Qfloat("0"), Qfloat("1"), Qfloat("10"), Qfloat("11"), Qfloat("100"), Qfloat("101"), Qfloat("110"), Qfloat("111"), Qfloat("1000"), Qfloat("1001") };
