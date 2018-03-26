@@ -3,7 +3,6 @@
 #include <string>
 #include "QInt.h"
 #include "signbias.h"
-using namespace std;
 
 class Qfloat
 {
@@ -14,7 +13,6 @@ public:
 	Qfloat();
 	Qfloat(const std::string&);
 	static Qfloat FromDec(const string &);
-	static Qfloat FromBin(const string &);
 	void set_inf(bool neg);
 	void set_nan();
 	void set_zero();
@@ -29,8 +27,8 @@ public:
 	Qfloat operator << (uint16_t) const;
 	Qfloat operator >> (uint16_t) const;
 	bool operator < (const Qfloat&) const;
-	string ToBin() const;
-	string ToDec() const;	
+	std::string ToBin() const;
+	string ToDec() const;
 };
 
 const Qfloat naturalDigits[10] =
