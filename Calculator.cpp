@@ -31,8 +31,8 @@ void Calculate(const vector<string> &tokens, ofstream & outf)
 /// <param name = "tokens"> Yeu cau cua nguoi dung </param>
 /// <param name = "outf"> Stream output </param>
 void Calculate10(const vector<string> & tokens, ofstream & outf)
-{
-	if ((int)tokens.size() == 3) // Lenh doi co so.
+{	
+	if ((int)tokens.size() == 3 && tokens[2] != "~") // Lenh doi co so.
 	{		
 		if (IsFloatingPoint(tokens[2])) // So thuc
 		{
@@ -51,9 +51,15 @@ void Calculate10(const vector<string> & tokens, ofstream & outf)
 				throw _UNEXPECTED_AGRUMENT;
 		}		
 	}
-	else if((int)tokens.size() == 4) // Lenh tinh toan.		
-	{		
-		if (IsFloatingPoint(tokens[1]) || IsFloatingPoint(tokens[3])) // So thuc
+	else // Lenh tinh toan
+	{	
+		if (tokens[2] == "~") // Toan tu not
+		{
+			QInt x(tokens[1]);
+			x = ~x;
+			x.Print(outf);
+		}
+		else if (IsFloatingPoint(tokens[1]) || IsFloatingPoint(tokens[3])) // So thuc
 		{
 			Qfloat a = Qfloat::FromDec(tokens[1]); // Trich 2 so thuc ra.
 			Qfloat b = Qfloat::FromDec(tokens[3]);
@@ -66,7 +72,6 @@ void Calculate10(const vector<string> & tokens, ofstream & outf)
 			Calculate(a, b, tokens[2]).Print(outf); // Tinh ket qua phep toan chua trong tokens[2] roi xuat.
 		}		
 	}
-	else throw _UNEXPECTED_AGRUMENT;
 }
 
 ///<summary>
@@ -76,7 +81,7 @@ void Calculate10(const vector<string> & tokens, ofstream & outf)
 /// <param name = "outf"> Stream output </param>
 void Calculate2(const vector<string> & tokens, ofstream & outf)
 {
-	if ((int)tokens.size() == 3) // Lenh doi co so.
+	if ((int)tokens.size() == 3 && tokens[2] != "~") // Lenh doi co so.
 	{		
 		if (IsFloatingPoint(tokens[2])) // So thuc
 		{
@@ -96,9 +101,15 @@ void Calculate2(const vector<string> & tokens, ofstream & outf)
 				throw _UNEXPECTED_AGRUMENT;
 		}		
 	}
-	else if ((int)tokens.size() == 4) // Lenh tinh toan.		
-	{		
-		if (IsFloatingPoint(tokens[1]) || IsFloatingPoint(tokens[3])) // So thuc.
+	else // Lenh tinh toan.		
+	{	
+		if (tokens[2] == "~")
+		{
+			QInt x = QInt::FromBin(tokens[1]);
+			x = ~x;
+			outf << x.ToBin();
+		}
+		else if (IsFloatingPoint(tokens[1]) || IsFloatingPoint(tokens[3])) // So thuc.
 		{
 			Qfloat a(tokens[1]); // Trich 2 so thuc ra.
 			Qfloat b(tokens[3]);
@@ -110,8 +121,7 @@ void Calculate2(const vector<string> & tokens, ofstream & outf)
 			QInt b = QInt::FromBin(tokens[3]);
 			outf << Calculate(a, b, tokens[2]).ToBin(); // Tinh toan xong xuat o dang nhi phan.
 		}		
-	}
-	else throw _UNEXPECTED_AGRUMENT;
+	}	
 }
 
 ///<summary>
@@ -121,7 +131,7 @@ void Calculate2(const vector<string> & tokens, ofstream & outf)
 /// <param name = "outf"> Stream output </param>
 void Calculate16(const vector<string> & tokens, ofstream & outf)
 {
-	if ((int)tokens.size() == 3) // Lenh doi co so.
+	if ((int)tokens.size() == 3 && tokens[2] != "~") // Lenh doi co so.
 	{
 		QInt tmp = QInt::FromHex(tokens[2]); // Khoi tao 1 so QInt tu xau nhi phan.
 		if (tokens[1] == "10") // Doi sang co so 10 thi chi can xuat ra.
@@ -131,13 +141,21 @@ void Calculate16(const vector<string> & tokens, ofstream & outf)
 		else
 			throw _UNEXPECTED_AGRUMENT;
 	}
-	else if ((int)tokens.size() == 4) // Lenh tinh toan.		
+	else // Lenh tinh toan.		
 	{
-		QInt a = QInt::FromHex(tokens[1]); // Trich 2 so nguyen ra.
-		QInt b = QInt::FromHex(tokens[3]);	
-		outf << Calculate(a, b, tokens[2]).ToHex(); // Tinh toan sau do doi sang hexa roi xuat.
-	}
-	else throw _UNEXPECTED_AGRUMENT;
+		if (tokens[2] == "~") // Toan tu not
+		{
+			QInt x = QInt::FromHex(tokens[1]);
+			x = ~x;
+			outf << x.ToHex();
+		}
+		else
+		{
+			QInt a = QInt::FromHex(tokens[1]); // Trich 2 so nguyen ra.
+			QInt b = QInt::FromHex(tokens[3]);
+			outf << Calculate(a, b, tokens[2]).ToHex(); // Tinh toan sau do doi sang hexa roi xuat.
+		}		
+	}	
 }
 
 /// <summary>
