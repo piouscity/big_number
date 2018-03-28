@@ -1,673 +1,629 @@
-#include "QInt.h"
+#pragma once
+#include "Qfloat.h"
 #include <algorithm>
-#include <list>
-using namespace std;
+#include <sstream>
 
-/// <summary>
-/// Constructor mac dinh cua lop QInt
-/// Khoi tao so QInt voi gia tri 0 (tat ca cac bit = 0)
-/// </summary>
-QInt::QInt()
+/* Constructor mặc định
+	Lưu giá trị 0 */
+Qfloat::Qfloat() : expo(0, signbias::UNDER)
 {
-	fill(box, box + 4, 0);
+	std::fill(val, val + 7, 0);
 }
 
-/// <summary>
-/// Constructor khoi tao so QInt tu mot so int.
-/// </summary>
-/// <param name = "val"> So int duoc cho </param>
-QInt::QInt(int val)
+/* Constructor chuẩn
+	Nhận vào một xâu chứa số nhị phân
+	Mỗi kí tự phải nằm trong tập { '1', '0', '-', '.' }
+	Kí tự '-' và '.' chỉ xuất hiện nhiều nhất 1 lần
+	Kí tự '-' chỉ được xuất hiện ở đầu xâu
+*/
+Qfloat::Qfloat(const std::string& str)
 {
-	box[0] = val;
-	for (int i = 1; i < 4; i++)
-		if (val < 0) // MSB = 1
-		{
-			box[i] = -1; // -1 = 1111 1111 1111 1111 	
-		}
+	int head = str.find_first_of('1');
+	int dot = str.find_first_of('.');
+	if (head == std::string::npos) // Không chứa bit 1
+		this->set_zero();
+	else
+	{
+		expo.setsign(str[0] == '-');
+		if (dot == std::string::npos)
+			dot = str.length();
+		// Nếu trị tuyệt đối quá lớn
+		if (dot - head - 1 >= signbias::OVER)
+			this->set_inf(expo.sign());
 		else
 		{
-			box[i] = 0;
-		}
-}
-
-/// <summary>
-/// Constructor khoi tao so QInt tu mot xau
-/// <summary>
-/// <param name = "str"> Xau chua so can khoi tao </param>
-QInt::QInt(const string &str) : QInt()
-{
-	QInt tmp(1);
-	QInt ten(10);
-	for (int i = (int)str.size() - 1; i >= 0; i--)
-	{
-		if (str[i] == '-')
-		{
-			*this = -*this;
-			break;
-		}
-		int ch = str[i] - '0';
-		*this = (*this) + tmp * QInt(ch);
-		tmp = (tmp << 3) + (tmp << 1);
-	}
-}
-
-/// <summary>
-/// Ham lay gia tri cua mot bit trong so QInt
-/// </summary>
-/// <param name = "pos"> Vi tri cua bit can lay gia tri </param>
-/// <returns> Gia tri cua bit </returns>
-bool QInt::GetBit(int pos) const
-{
-	int boxId = pos >> 5;
-	int bitId = pos & ((1 << 5) - 1);
-	return (box[boxId] >> bitId) & 1;
-}
-
-/// <summary>
-/// Ham dat bit cua so QInt tai mot vi tri cho truoc thanh mot bit cho truoc.
-// </summary>
-/// <param name = "pos"> Vi tri cua bit can dat gia tri </param>
-/// <param name = "bit"> Gia tri cua bit sau khi dat </param>
-void QInt::SetBit(int pos, bool bit)
-{
-	if (GetBit(pos) != bit)
-		ChangeBit(pos);
-}
-
-/// <summary>
-/// Ham thay doi gia tri mot bit tai vi tri cho truoc trong so QInt
-/// </summary>
-/// <param name = "pos"> Vi tri cua bit can thay doi </param>
-void QInt::ChangeBit(int pos)
-{
-	int boxId = pos >> 5;
-	int bitId = pos & ((1 << 5) - 1);
-	box[boxId] ^= 1 << bitId;
-}
-
-/// <summary>
-/// Ham dich bit logic so QInt sang phai.
-/// </summary>
-/// <param name = "shamt"> So bit can phai dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::operator >> (int shamt) const
-{
-	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-									   // Thay vi dich so QInt sang phai shamt lan, ta phan
-									   // tich shamt = 32 * p + q.
-									   // Nhu vay, box thu i se nhan gia tri cua box thu i + p, sau do dich phai them q lan nua.
-	int p = shamt >> 5;
-	int q = shamt & ((1 << 5) - 1);
-	QInt res;
-	for (int i = 0; i + p < 4; i++) // box thu i nhan gia tri cua box thu i + p.
-		res.box[i] = this->box[i + p];
-	for (int i = 0; i < 4; i++) // Dich tung box them q lan nua.
-	{
-		res.box[i] >>= q; // Dich phai box thu i.
-		if (i + 1 < 4)
-			res.box[i] |= res.box[i + 1] << (boxSize - q); // Copy 32 - q bit cuoi cua box thu i + 1 de ghep vao 32 - q bit dau cua box thu i.
-	}
-	return res;
-}
-
-/// <summary>
-/// Ham dich bit logic so QInt sang trai.
-/// </summary>
-/// <param name = "shamt"> So bit can dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::operator << (int shamt) const
-{
-	if (shamt >= qSize) return QInt(); // Tra ve 0 neu dich qua nhieu.
-									   // Cach dich tuong tu operator >> 
-	int p = shamt >> 5;
-	int q = shamt & ((1 << 5) - 1);
-	QInt res;
-	for (int i = p; i < 4; i++) // box thu i nhan gia tri cua box thu i - p.
-		res.box[i] = this->box[i - p];
-	for (int i = 3; i >= 0; i--) // Dich tung box them q lan nua.
-	{
-		res.box[i] <<= q;
-		if (i > 0)
-			res.box[i] |= this->box[i - 1] >> (boxSize - q); // Copy 32 - q bit cuoi cua box thu i - 1 vao 32 - q bit dau cua box thu i.
-	}
-	return res;
-}
-
-/// <summary>
-/// Ham dich bit so hoc so QInt, dich sang trai.
-/// </summary>
-/// <param name = "shamt"> So bit can dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::AShiftLeft(int shamt) const
-{
-	bool msb = this->GetBit(qSize - 1); // Luu lai bit trai nhat.
-	QInt res = (*this) << shamt; // Dich logic.
-	res.SetBit(qSize - 1, msb); // Gan lai bit trai nhat.
-	return res;
-}
-
-/// <summary>
-/// Ham dich bit so hoc so QInt, dich sang phai.
-/// </summary>
-/// <param name = "shamt"> So bit can dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::AShiftRight(int shamt) const
-{
-	bool msb = this->GetBit(qSize - 1); // Luu lai bit trai nhat.
-	QInt res = (*this) >> shamt; // Dich logic.
-	res.SetBit(qSize - 1, msb); // gan lai bit trai nhat.
-	return res;
-}
-
-/// <summary>
-/// Operator hai ngoi &, thuc hien phep toan logic and giua hai so QInt.
-/// </summary>
-/// <param name = "other"> SO QInt thu hai </param>
-/// <returns> Ket qua cua phep and </returns>
-QInt QInt::operator & (const QInt &other) const
-{
-	QInt res;
-	for (int i = 0; i < 4; i++)
-		res.box[i] = this->box[i] & other.box[i]; // And tung box du lieu.
-	return res;
-}
-
-/// <summary>
-/// Operator hai ngoi |, thuc hien phep toan logic or giua hai so QInt.
-/// </summary>
-/// <param name = "other"> SO QInt thu hai </param>
-/// <returns> Ket qua cua phep or </returns>
-QInt QInt::operator | (const QInt &other) const
-{
-	QInt res;
-	for (int i = 0; i < 4; i++)
-		res.box[i] = this->box[i] | other.box[i]; // Or tung box du lieu.
-	return res;
-}
-
-/// <summary>
-/// Operator hai ngoi ^, thuc hien phep toan logic xor giua hai so QInt.
-/// </summary>
-/// <param name = "other"> SO QInt thu hai </param>
-/// <returns> Ket qua cua phep xor </returns>
-QInt QInt::operator ^ (const QInt &other) const
-{
-	QInt res;
-	for (int i = 0; i < 4; i++)
-		res.box[i] = this->box[i] ^ other.box[i]; // Or tung box du lieu.
-	return res;
-}
-
-/// <summary>
-/// Operator mot ngoi ~, thuc hien phep toan logic not mot so QInt.
-/// </summary>
-/// <returns> Ket qua cua phep not </returns>
-QInt QInt::operator ~() const
-{
-	QInt res;
-	for (int i = 0; i < 4; i++)
-		res.box[i] = ~this->box[i]; // Not tung box du lieu.
-	return res;
-}
-
-/// <summary>
-/// Operator hai ngoi +, thuc hien phep cong giua hai so QInt.
-/// </sumamry>
-/// <param name = "other"> So Qint thu hai </param>
-/// <returns> Ket qua cua phep cong </returns>
-QInt QInt::operator + (const QInt &other) const
-{
-	QInt res;
-	bool carry = false;
-	for (int i = 0; i < 4; i++)
-	{
-		res.box[i] = this->box[i] + other.box[i] + carry; // Cong tung box.
-		if ((other.box[i] || carry) == 0) // Ca 2 so = 0
-			carry = 0;
-		else carry = res.box[i] <= this->box[i]; // Neu tran so thi nho 1 bit sang box tiep theo.
-	}
-	return res;
-}
-
-/// <summary>
-/// Operator hai ngoi -, thuc hien phep cong giua hai so QInt.
-/// </sumamry>
-/// <param name = "other"> So Qint thu hai </param>
-/// <returns> Ket qua cua phep tru </returns>
-QInt QInt::operator - (const QInt &other) const
-{
-	QInt res;
-	bool carry = false;
-	for (int i = 0; i < 4; i++)
-	{
-		res.box[i] = this->box[i] - (other.box[i] + carry); // Tru tung box.
-		if ((other.box[i] || carry) == 0) // Ca 2 so = 0
-			carry = 0;
-		else carry = res.box[i] >= this->box[i]; // Neu tran so thi nho 1 bit sang box tiep theo.
-	}
-	return res;
-}
-
-/// <summary> 
-/// Ham nhan hai so QInt.
-/// </summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep nhan </returns>
-QInt QInt::operator * (const QInt &other) const
-{
-	// Nhan 2 so QInt su dung thuat toan Booth.
-	QInt A;
-	QInt Q = other;
-	bool P = false;
-	for (int i = 0; i < qSize; i++)
-	{
-		bool prevP = Q.GetBit(0); // Lay LSB cua so Q.
-		if (prevP == false && P == true) // 01.
-			A = A + *this;
-		if (prevP == true && P == false) // 10.
-			A = A - *this;
-		P = prevP; // Shift.
-		Q = Q >> 1;
-		Q.SetBit(qSize - 1, A.GetBit(0));
-		A = A.AShiftRight(1);
-	}
-	// Ket qua la mot so nguyen 32 box co dang A * 2^16 + Q.
-	// Tuy nhien, do QInt la so nguyen 16 box nen ta phai loai 16 box thua di, chi lay Q.
-	return Q;
-}
-
-/// <summary>
-/// Operator hai ngoi /, thuc hien phep chia mot so QInt cho mot so QInt.
-/// </summary>
-/// <param name = "other"> So bi chia </param>
-/// <returns> Ket qua phep chia </param>
-QInt QInt::operator / (const QInt &other) const
-{
-	QInt div, mod;
-	this->Divide(other, div, mod);
-	return div;
-}
-
-/// <summary>
-/// Ham chia mot so QInt cho mot so QInt khac.
-/// </summary>
-/// <param name = "other"> So chia </param>
-/// <param name = "div"> Ket qua cua phep chia </param>
-/// <param name = "mod"> So du cua phep chia </param>
-void QInt::Divide(const QInt & other, QInt & div, QInt & mod) const
-{
-	mod = QInt(0);
-	div = *this;
-	QInt M = other;
-	bool sign = false; // Luu lai dau cua phep chia.
-	if (div.GetBit(qSize - 1) == true) // Bao dam div va M luon >= 0
-	{
-		div = -div;
-		sign ^= true;
-	}
-	if (M.GetBit(qSize - 1) == true)
-	{
-		M = -M;
-		sign ^= true;
-	}
-	for (int i = 0; i < qSize; i++) // Thuc hien chia theo thuat toan trong tai lieu.
-	{
-		mod = mod << 1;
-		mod.SetBit(0, div.GetBit(qSize - 1)); // Copy MSB cua Q vao LSB cua A.
-		div = div << 1;
-		QInt tmp = mod - M;
-		if (tmp.GetBit(qSize - 1) == false) // tmp >= 0			
-		{
-			mod = tmp;
-			div.SetBit(0, 1);
-		}
-	}
-	if (sign) // Neu thuong la am thi doi dau.
-	{
-		div = -div;
-		mod = -mod;
-	}
-}
-
-/// <summary>
-/// Ham lay so doi cua mot so QInt
-/// </summary>
-/// <returns> So doi cua so QInt </returns>
-QInt QInt::operator - () const
-{
-	QInt res = ~(*this); // Bu 1	
-	return ++res; // Bu 2
-}
-
-/// <summary>
-/// Toan tu mot ngoi ++ (prefix)
-/// </summary>
-/// <returns> So QInt sau khi ++ </returns>
-QInt QInt::operator ++ ()
-{
-	bool carry = true;
-	for (int i = 0; i < 4; i++)
-	{
-		uint32_t tmp = this->box[i] + carry;
-		carry = tmp < box[i];
-		box[i] = tmp;
-	}
-	return *this;
-}
-
-/// <summary>
-/// Toan tu mot ngoi -- (prefix)
-/// </summary>
-/// <returns> So QInt sau khi -- </returns>
-QInt QInt::operator -- ()
-{
-	bool carry = true;
-	for (int i = 0; i < 4; i++)
-	{
-		uint32_t tmp = this->box[i] - carry;
-		carry = tmp > box[i];
-		box[i] = tmp;
-	}
-	return *this;
-}
-
-/// <summary>
-/// Operator hai ngoi >, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator > (const QInt & other) const
-{
-	if (this->GetBit(qSize - 1) == false && other.GetBit(qSize - 1) == true)
-		return true;
-	if (this->GetBit(qSize - 1) == true && other.GetBit(qSize - 1) == false)
-		return false;
-	for (int i = 3; i >= 0; i--)
-		if (this->box[i] != other.box[i])
-			return this->box[i] > other.box[i];
-	return false;
-}
-
-/// <summary>
-/// Operator hai ngoi <, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator < (const QInt & other) const
-{
-	return other > *this;
-}
-
-/// <summary>
-/// Operator hai ngoi >=, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator >= (const QInt & other) const
-{
-	return !(other > *this);
-}
-
-/// <summary>
-/// Operator hai ngoi <=, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator <= (const QInt &other) const
-{
-	return !(*this > other);
-}
-
-/// <summary>
-/// Operator hai ngoi ==, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator == (const QInt &other) const
-{
-	for (int i = 0; i < 4; i++)
-		if (this->box[i] != other.box[i]) return false;
-	return true;
-}
-
-/// <summary>
-/// Operator hai ngoi !=, thuc hien so sanh giua hai so QInt
-/// <summary>
-/// <param name = "other"> So QInt thu hai </param>
-/// <returns> Ket qua phep so sanh </returns>
-bool QInt::operator != (const QInt &other) const
-{
-	return !(*this == other);
-}
-
-/// <summary>
-/// Ham xuat mot so QInt ra stream.
-/// </summary>
-/// <param name = "outf"> Stream output </param>
-void QInt::Print(ofstream & outf)
-{
-	if (*this == QInt(0))
-	{
-		outf << 0;
-		return;
-	}
-	if (*this < QInt(0)) // Truong hop val < 0
-	{
-		outf << '-';
-		(-*this).Print(outf);
-		return;
-	}
-	QInt zero;
-	QInt ten(10);
-	QInt tmp = *this;
-	list<char> res;
-	while (tmp > zero)
-	{
-		QInt div, mod;
-		tmp.Divide(ten, div, mod); // Mod luon < 10.
-		res.push_front(mod.box[0] + 48); // Doi sang kieu ki tu.
-		tmp = div;
-	}
-	while (!res.empty()) // Xuat ket qua.
-	{
-		outf << res.front();
-		res.pop_front();
-	}
-}
-
-/// <summary>
-/// Ham trich du lieu tu so QInt sang mang 7 phan tu 2 byte va mot so nguyen 2 byte.
-/// <summary>
-/// <param name = base> Mang 7 phan tu neu tren </param>
-/// <param name = "extend"> So nguyen 2 byte neu tren </param>
-void QInt::Expor(uint16_t * base, uint16_t & extend)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		base[2 * i] = (box[i] << 16) >> 16; // Copy 16 bit dau.
-		if (i < 3)
-			base[2 * i + 1] = box[i] >> 16; // Copy 16 bit sau.
-		else
-			extend = box[i] >> 16;
-	}
-}
-
-/// <summary>
-/// Ham khoi tao mot so QInt tu mot day nhi phan
-/// <summary>
-/// <param name = "digits"> Day nhi phan duoc cho </param>
-/// <returns> So QInt sau khi khoi tao </returns>
-/// Throw exception neu nhu do dai day nhi phan qua gioi han
-QInt QInt::FromBin(const string & digits)
-{
-	if ((int)digits.size() > qSize)
-		throw _SIZE_EXCEEDED;
-	string bit(digits.rbegin(), digits.rend());
-	QInt res;
-	for (int i = 0; i < (int)bit.size(); i++)
-		res.SetBit(i, bit[i] - '0');
-	return res;
-}
-
-/// <summary>
-/// Ham khoi tao mot so QInt tu mot day hexa
-/// <summary>
-/// <param name = "digits"> Day hexa duoc cho </param>
-/// <returns> So QInt sau khi khoi tao </returns>
-/// Throw exception neu nhu do dai day nhi phan qua gioi han
-QInt QInt::FromHex(const string & digits)
-{
-	if ((int)digits.size() > hSize)
-		throw _SIZE_EXCEEDED;
-	string hex(digits.rbegin(), digits.rend());
-	QInt res;
-	uint32_t tmp = 0;
-	// Cu 8 ki tu hexa thi tao thanh mot so nguyen 32 bits.
-	// Gom nhom 8 ki tu, tinh gia tri vao bien tam sau do gan vao so QInt.
-	for (int i = 0; i < hSize; i++)
-	{
-		uint32_t val;
-		if (i < (int)hex.size())
-		{
-			val = hex[i] <= '9' ? hex[i] - '0' : hex[i] - 'A' + 10;
-		}
-		else val = 0;
-		tmp |= val << ((i & ((1 << 3) - 1)) << 2); // val << ((i % 8) * 4)
-		if ((i & ((1 << 3) - 1)) == 7) // i % 8 = 7
-		{
-			res.box[i >> 3] = tmp;
-			tmp = 0;
-		}
-	}
-	return res;
-}
-
-/// <summary>
-/// Ham doi mot so QInt sang mot xau nhi phan
-/// <summary>
-/// <returns> Xau nhi phan sau khi doi </returns>
-string QInt::ToBin() const
-{
-	string res;
-	for (int i = 0; i < qSize; i++) res += this->GetBit(i) + '0';
-	while (res.size() > 1 && res.back() == '0') res.pop_back();
-	reverse(res.begin(), res.end());
-	return res;
-}
-
-/// <summary>
-/// Ham doi mot so QInt sang mot xau hexa.
-/// <summary>
-/// <returns> Xau hexa sau khi doi </returns>
-string QInt::ToHex() const
-{
-	string res;
-	for (int i = 0; i < 4; i++) // Lay tung so nguyen 32 bits thanh phan.
-	{
-		uint32_t val = this->box[i];
-		for (int j = 0; j < 8; j++) // So nguyen 32 bits nay chua 8 ki tu hexa.
-		{
-			int tmp = val & ((1 << 4) - 1); // Mod 16 lay ra gia tri cua ki tu hexa.
-			if (tmp < 10)
-				res += tmp + '0';
+			// Nếu không biểu diễn dạng chuẩn được
+			if (dot - head <= signbias::UNDER)
+			{
+				head = dot - (signbias::UNDER + 1);
+				expo.setbias(signbias::UNDER);
+			}
+			else if (dot > head)
+				expo.setbias(dot - head - 1);
 			else
-				res += tmp - 10 + 'A';
-			val >>= 4;
+				expo.setbias(dot - head);
+			
+			// Gán phần trị 
+			QInt x;
+			int m = 112;
+			for (int i = head + 1; i < (int)str.length() && m>0; ++i)
+			{
+				if (i == dot) continue;
+				x.SetBit(--m, str[i] == '1');
+			}
+			uint16_t temp;
+			x.Expor(val, temp);
+
+			if (this->is_zero()) expo.setsign(0);
 		}
 	}
-	while (res.size() > 1 && res.back() == '0') res.pop_back();
-	reverse(res.begin(), res.end());
+}
+
+/* Đặt giá trị là -INF nếu neg=TRUE, +INF nếu neg=FALSE */
+void Qfloat::set_inf(bool neg)
+{
+	expo.setsign(neg);
+	expo.setbias(signbias::OVER);
+	std::fill(val, val + 7, 0);
+}
+
+/* Đặt giá trị là NAN */
+void Qfloat::set_nan()
+{
+	expo.setsign(0);
+	expo.setbias(signbias::OVER);
+	val[0] = 1;
+	std::fill(val + 1, val + 7, 0);
+}
+
+/* Đặt giá trị là 0 */
+void Qfloat::set_zero()
+{
+	expo.setsign(0);
+	expo.setbias(signbias::UNDER);
+	std::fill(val, val + 7, 0);
+}
+
+/* Kiểm tra số có bằng 0? */
+bool Qfloat::is_zero() const
+{
+	if (!expo.underflow()) return 0;
+	for (int i = 0; i < 7; ++i)
+		if (val[i])
+			return 0;
+	return 1;
+}
+
+/* Kiểm tra số có phải INF hoặc -INF? */
+bool Qfloat::is_inf() const
+{
+	if (!expo.overflow()) return 0;
+	for (int i = 0; i < 7; ++i)
+		if (val[i])
+			return 0;
+	return 1;
+}
+
+/* Kiểm tra số có phải NAN? */
+bool Qfloat::is_nan() const
+{
+	return expo.overflow() && !this->is_inf();
+}
+
+Qfloat Qfloat::operator - () const
+{
+	if (this->is_zero() || this->is_nan())
+		return *this;
+	Qfloat res(*this);
+	res.expo.setsign(!this->expo.sign());
 	return res;
 }
 
-/// <summary>
-/// Ham dich bit logic so QInt sang phai.
-/// </summary>
-/// <param name = "shamt"> So bit can phai dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::operator >> (const QInt &shamt) const
+Qfloat Qfloat::operator+ (const Qfloat& other) const
 {
-	if (shamt >= QInt(32)) return QInt(0);
-	return (*this) >> shamt.box[0];
-}
-
-/// <summary>
-/// Ham dich bit logic so QInt sang trai.
-/// </summary>
-/// <param name = "shamt"> So bit can dich </param>
-/// <returns> So QInt sau khi dich </returns>
-QInt QInt::operator << (const QInt &shamt) const
-{
-	if (shamt >= QInt(32)) return QInt(0);
-	return (*this) << shamt.box[0];
-}
-
-/// <summary>
-/// Constructor khoi tao mot so QInt tu mot mang 7 + 1 so 16 bit
-/// </summary>
-/// <param name = "base"> Mang 7 so 16 bit </param>
-/// <param name = "extend"> So 16 bit rieng </param>
-QInt::QInt(const uint16_t * base, uint16_t extend)
-{
-	for (int i = 0; i < 4; i++)
-	{
-		box[i] = base[2 * i]; // Ghep 16 bit dau.
-		if (i < 3) // Ghep 16 bit sau.
-			box[i] |= uint32_t(base[2 * i + 1]) << 16;
+	Qfloat res;
+	if (this->is_nan() || other.is_nan())
+		res.set_nan();
+	else
+		if (this->is_inf())
+		{
+			if (other.is_inf() && this->expo.sign() != other.expo.sign())
+				res.set_nan();
+			else
+				res = *this;
+		}
+		else if (other.is_inf())
+			res = other;
 		else
-			box[i] |= uint32_t(extend) << 16;
-	}
+		{
+			if (this->is_zero())
+				res = other;
+			else if (other.is_zero())
+				res = *this;
+			else
+			{
+				bool less = this->expo < other.expo;
+				QInt this_val(this->val, !this->expo.underflow());
+				QInt other_val(other.val, !other.expo.underflow());
+				signbias this_expo = this->expo;
+				signbias other_expo = other.expo;
+				bool brk = 0;
+				// Chừng nào phần mũ còn khác nhau
+				while (!brk && this_expo != other_expo)
+				{
+					if (less)
+					{
+						if (!this_expo.underflow())
+							this_val = this_val >> 1;
+						++this_expo;
+						if (this_val == 0)
+						{
+							res = other;
+							brk = 1;
+						}
+					}
+					else
+					{
+						if (!other_expo.underflow())
+							other_val = other_val >> 1;
+						++other_expo;
+						if (other_val == 0)
+						{
+							res = *this;
+							brk = 1;
+						}
+					}
+				}
+				// Nếu chạy tiếp, lúc này phần mũ bằng nhau
+				if (!brk)
+				{
+					QInt res_val;
+					res.expo.setbias(this_expo.bias());
+					// Cộng phần trị
+					if (this_expo.sign() == other_expo.sign())
+					{
+						res_val = this_val + other_val;
+						res.expo.setsign(this_expo.sign());
+					}
+					else
+					if (this_val > other_val)
+					{
+						res_val = this_val - other_val;
+						res.expo.setsign(this_expo.sign());
+					}
+					else
+					{
+						res_val = other_val - this_val;
+						res.expo.setsign(other_expo.sign());
+					}
+					// Kiểm tra phần trị
+					if (res_val == 0)
+						res.set_zero();
+					else
+					{
+						bool brk = 0;
+						if (res.expo.underflow()) ++res.expo;
+						// Overflow?
+						if (res_val.Expor() > 1)
+						{
+							res_val = res_val >> 1;
+							++res.expo;
+							if (res.expo.overflow())
+							{
+								brk = 1;
+								res.set_inf(res.expo.sign());
+							}
+						}
+						if (!brk)
+						{
+							// Không chuẩn
+							while (res_val.Expor() == 0)
+							{
+								--res.expo;
+								if (res.expo.underflow())
+									break;
+								res_val = res_val << 1;
+							}
+							uint16_t temp;
+							res_val.Expor(res.val, temp);
+						}
+					}
+				}
+			}
+		}
+	return res;
+}
+Qfloat Qfloat::operator - (const Qfloat& other) const
+{
+	return operator + (-other);
 }
 
-/// <summary>
-/// Ham tra ve 16 bit cuoi cua so QInt
-/// </summary>
-/// <returns> 16 bit cuoi cua so QInt </returns>
-uint16_t QInt::Expor() const
+Qfloat Qfloat::operator * (const Qfloat& other) const
 {
-	return box[3] >> 16;
+	Qfloat res;
+	if (this->is_nan() || other.is_nan())
+		res.set_nan();
+	else
+		if (this->is_inf() || other.is_inf())
+		{
+			if (this->is_zero() || other.is_zero())
+				res.set_nan();
+			else
+				res.set_inf(this->expo.sign() ^ other.expo.sign());
+		}
+		else if (this->is_zero() || other.is_zero())
+			res.set_zero();
+		else
+		{
+			res.expo.setsign(this->expo.sign() ^ other.expo.sign());
+			int ex = this->expo.bias() + other.expo.bias() 
+					+ this->expo.underflow() + other.expo.underflow();
+			// Nếu số mũ quá lớn
+			if (ex >= signbias::OVER)
+				res.set_inf(res.expo.sign());
+			else
+			{
+				
+				QInt this_val(this->val, !this->expo.underflow());
+				QInt other_val(other.val, !other.expo.underflow());
+				QInt extend;
+				QInt res_val = this_val.Multiply(other_val, extend);
+				if (ex <= signbias::UNDER)
+				{
+					// Gọi res_val.Expor() là e, lúc này 0 <= e <= 3
+					int shift = signbias::UNDER + 1 - ex; // shift > 0
+					res_val = res_val >> shift; // Do đó, 0 <= e <= 1
+					res.expo.setbias(signbias::UNDER + res_val.Expor());
+					uint16_t temp;
+					res_val.Expor(res.val, temp);
+					if (res.is_zero()) res.expo.setsign(0);
+				}
+				else
+				{
+					res.expo.setbias(ex);
+					bool brk = 0;
+					if (res_val.Expor() > 1)
+					{
+						res_val = res_val >> 1;
+						++res.expo;
+						if (res.expo.overflow())
+						{
+							brk = 1;
+							res.set_inf(res.expo.sign());
+						}
+					}
+					if (!brk)
+					{
+						int head = 111;
+						while (res_val.Expor() == 0)
+						{
+							--res.expo;
+							if (res.expo.underflow())
+								break;
+							res_val = res_val << 1;
+							if (head >= 0)
+								res_val.SetBit(0, extend.GetBit(head--));
+						}
+						uint16_t temp;
+						res_val.Expor(res.val, temp);
+					}
+				}
+			}
+		}
+	return res;
 }
 
-/// <summary>
-/// Ham tro giup phep nhan 2 so thuc.
-/// </summary>
-QInt QInt::Multiply(const QInt & other, QInt& extend) const
+Qfloat Qfloat::operator / (const Qfloat& other) const
 {
-	QInt A;
-	QInt Q = other;
-	bool P = false;
-	for (int i = 0; i < qSize; i++)
+	Qfloat res;
+	if (this->is_nan() || other.is_nan()) // Neu mot trong 2 so la nan thi tra ve nan.
 	{
-		bool prevP = Q.GetBit(0); // Lay LSB cua so Q.
-		if (prevP == false && P == true) // 01.
-			A = A + *this;
-		if (prevP == true && P == false) // 10.
-			A = A - *this;
-		P = prevP; // Shift.
-		Q = Q >> 1;
-		Q.SetBit(qSize - 1, A.GetBit(0));
-		A = A.AShiftRight(1);
+		res.set_nan();
+		return res;
+	}
+	if (other.is_inf())
+	{
+		if (this->is_inf()) // oo / oo = nan.
+			res.set_nan();
+		else // x / oo = 0.
+			res.set_zero();
+		return res;
+	}
+	if (other.is_zero()) // So chia = 0 thi tra ve nan.
+	{
+		res.set_nan();
+		return res;
+	}
+	if (this->is_inf()) // Neu so bi chia la +oo hoac -oo.
+	{
+		if (other.expo.sign() == this->expo.sign()) // Chia 2 so cung dau thi ra +oo.
+			res.set_inf(0);
+		else // Chia 2 so khac dau thi ra -oo.
+			res.set_inf(1);
+		return res;
+	}
+	if (this->is_zero()) return Qfloat();
+	
+	res.expo.setsign(this->expo.sign() ^ other.expo.sign());
+	int ex = this->expo.bias() - other.expo.bias()
+		+ this->expo.underflow() - other.expo.underflow();
+
+	QInt this_val(this->val, !this->expo.underflow());
+	QInt other_val(other.val, !other.expo.underflow());
+	QInt res_val = this_val / other_val;
+	this_val = this_val % other_val;
+	if (res_val > 0)
+	{
+		// Số 1 trái nhất
+		unsigned head = 112u;
+		while (res_val.GetBit(head) == 0) --head;
+		ex += head;
+		while (head < 112u)
+		{
+			bool temp = this_val.Divide(other_val);
+			res_val = res_val << 1;
+			res_val.SetBit(0, temp);
+			++head;
+		}
+	}
+	else
+	{
+		while (1)
+		{
+			bool temp = this_val.Divide(other_val);
+			--ex;
+			if (temp) break;
+		}
+		res_val.SetBit(112, 1);
+		for (int i = 111; i>=0; --i)
+			res_val.SetBit(i, this_val.Divide(other_val));
+	}
+	if (ex >= signbias::OVER) // Quá lớn
+		res.set_inf(res.expo.sign());
+	else
+	{
+		if (ex <= signbias::UNDER)
+		{
+			int shift = signbias::UNDER + 1 - ex;
+			res_val = res_val >> shift;
+			res.expo.setbias(signbias::UNDER);
+		}
+		else
+			res.expo.setbias(ex);
+		uint16_t temp;
+		res_val.Expor(res.val, temp);
+		if (res.is_zero()) res.expo.setsign(0);
+	}
+	return res;
+}
+
+Qfloat Qfloat::operator << (uint16_t shift) const
+{
+	if (this->is_nan() || this->is_zero()) return *this;
+	Qfloat res = *this;
+	QInt res_val(res.val, !res.expo.underflow());
+	while (shift && res.expo.underflow())
+	{
+		--shift;
+		res_val = res_val << 1;
+		if (res_val.Expor() > 0) ++res.expo;
+	}
+	int ex = res.expo.bias() + shift;
+	if (ex >= signbias::OVER) res.set_inf(res.expo.sign());
+	else
+	{
+		res.expo.setbias(ex);
+		uint16_t temp;
+		res_val.Expor(res.val, temp);
+	}
+	return res;
+}
+Qfloat Qfloat::operator >> (uint16_t shift) const
+{
+	if (this->expo.overflow() || this->is_zero()) return *this;
+	Qfloat res = *this;
+	int ex = res.expo.bias() - shift;
+	if (ex > signbias::UNDER)
+		res.expo.setbias(ex);
+	else
+	{
+		QInt res_val(res.val, !res.expo.underflow());
+		if (!res.expo.underflow())
+			shift -= res.expo.bias() - (signbias::UNDER + 1);
+		res.expo.setbias(signbias::UNDER);
+		res_val = res_val >> shift;
+		uint16_t temp;
+		res_val.Expor(res.val, temp);
+	}
+	return res;
+}
+
+bool Qfloat::operator < (const Qfloat& other) const
+{
+	if (this->expo.sign() != other.expo.sign())
+		return this->expo.sign();
+	bool neg = this->expo.sign();
+	if (this->expo != other.expo)
+		return neg ? this->expo > other.expo : this->expo < other.expo;
+	for (int i = 6; i>=0; --i)
+		if (this->val[i] != other.val[i])
+			return neg ? this->val[i] > other.val[i] : this->val[i] < other.val[i];
+	return 0;
+}
+
+/* Trả về xâu thể hiện nhị phân */
+std::string Qfloat::ToBin() const
+{
+	if (is_nan()) return "NAN";
+	if (is_inf()) return expo.sign() ? "-INF" : "INF";
+	if (is_zero()) return "0";
+
+	std::string res;
+	if (expo.sign()) res += '-';
+
+	if (std::abs(expo.bias()) > 120)
+	{
+		res += expo.underflow() ? '0' : '1';
+		res += '.';
+		QInt v(val, 0);
+		for (int i = 111; i>=0; --i)
+			res += v.GetBit(i) + '0';
+		while (res.back() == '0') res.pop_back();
+		if (res.back() == '.') res += '0';
+		res += "*2^";
+		int ex = expo.bias() + expo.underflow();
+		stringstream ss;
+		string temp;
+		ss << ex;
+		ss >> temp;
+		res = res + temp;
+	}
+	else
+	{
+		bool dot = 0;
+		// Số mũ ko âm
+		if (expo.bias() >= 0)
+		{
+			res += '1';
+			QInt v(val, 0);
+			int cur = 111;
+			for (unsigned i = expo.bias(); i; --i)
+			{
+				if (cur >= 0) res += v.GetBit(cur--) + '0';
+				else res += '0';
+			}
+			if (cur >= 0)
+			{
+				dot = 1;
+				res += '.';
+				for (; cur >= 0; --cur)
+					res += v.GetBit(cur) + '0';
+			}
+		}
+		else
+		{
+			dot = 1;
+			res = res + "0.";
+			bool denormal = expo.underflow();
+			unsigned ex = -(denormal + expo.bias());
+			for (; ex > 1u; --ex)
+				res += '0';
+			res += denormal ? '0' : '1';
+
+			QInt v(val, 0);
+			for (int i = 111; i >= 0; --i)
+				res += v.GetBit(i) + '0';
+		}
+		if (dot) {
+			while (res.back() == '0') res.pop_back();
+			if (res.back() == '.') res += '0';
+		}
+	}
+	return res;
+}
+
+Qfloat Qfloat::FromDec(const string & val)
+{
+	int dot = val.find_first_of('.');
+	if (dot == string::npos) dot = val.length();
+	Qfloat res;
+	Qfloat ten("1010");
+	for (int i = (int)val.length() - 1; i > dot; --i)
+	{
+		res = res + naturalDigits[val[i] - '0'];
+		res = res / ten;
+	}
+	Qfloat pow("1");
+	for (int i = dot - 1; i >= 0 && val[i] != '-'; --i)
+	{
+		res = res + naturalDigits[val[i] - '0'] * pow;
+		pow = pow * ten;
+	}
+	if (val[0] == '-') res = -res;
+	return res;
+}
+
+string Qfloat::ToDec() const
+{
+	if (is_nan()) return "NAN";
+	if (is_inf()) return expo.sign() ? "-INF" : "INF";
+	if (is_zero()) return "0";
+
+	string res;
+	Qfloat ten("1010"), num(*this);
+	if (expo.sign())
+	{
+		res += '-';
+		num = -num;
 	}
 	
-	extend = Q;
-	return (Q >> 112 | A << 16);
-}
-
-bool QInt::Divide(const QInt & other)
-{
-	*this = *this << 1;
-	bool res = 0;
-	if (*this >= other)
+	// Phần nguyên
+	if (num < naturalDigits[1]) res += '0';
+	else
 	{
-		res = 1;
-		*this = *this - other;
+		Qfloat pow = naturalDigits[1], ptmp;
+		int cnt = 0;
+		while (1)
+		{
+			ptmp = pow * ten;
+			if (num < ptmp) break;
+			pow = ptmp;
+			++cnt;
+		}
+		for(; cnt>=0; --cnt)
+		{
+			ptmp = num / pow;
+			if (ptmp < naturalDigits[1]) res += '0';
+			else
+			{
+				int str = 1;
+				uint16_t tmp = ptmp.val[6];
+				for (unsigned ex = ptmp.expo.bias(); ex; --ex) {
+					(str <<= 1) |= tmp >> 15;
+					tmp <<= 1;
+				}
+				res += str + '0';
+				num = num - pow * naturalDigits[str];
+			}
+			pow = pow / ten;
+		}
 	}
-	return res;
-}
+	res += '.';
+	// Phần thực
+	num = num * ten;
+	for(unsigned cnt = res.length() - (res[0]=='-') - 1; cnt<32; ++cnt)
+	{
+		if (num < naturalDigits[1]) res = res + '0';
+		else
+		{
+			int str = 1;
+			uint16_t tmp = num.val[6];
+			for (unsigned ex = num.expo.bias(); ex; --ex) {
+				(str <<= 1) |= tmp >> 15;
+				tmp <<= 1;
+			}
+			res += str + '0';
+			num = num - naturalDigits[str];
+		}
+		num = num * ten;
+	}
+	// Làm tròn
+	if (res.back() != '.')
+	{
+		bool carry = res.back() >= '5';
+		res.pop_back();
+		while (carry && res.back() != '.')
+		{
+			if (res.back() < '9') {
+				++res.back();
+				carry = 0;
+			}
+			else
+				res.pop_back();
+		}
+	}
 
-QInt QInt::operator % (const QInt & other) const
-{
-	QInt div, mod;
-	this->Divide(other, div, mod);
-	return mod;
+	while (res.back() == '0') res.pop_back();
+	if (res.back() == '.') res += '0';
+	return res;
 }
