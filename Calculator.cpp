@@ -81,7 +81,7 @@ void Calculate2(const vector<string> & tokens, ofstream & outf)
 		if (IsFloatingPoint(tokens[2])) // So thuc
 		{
 			if (tokens[1] == "10") // Doi sang thap phan
-				outf << Qfloat::FromBin(tokens[2]).ToDec();
+				outf << Qfloat(tokens[2]).ToDec();
 			else
 				throw _UNEXPECTED_AGRUMENT;
 		}
@@ -100,8 +100,8 @@ void Calculate2(const vector<string> & tokens, ofstream & outf)
 	{		
 		if (IsFloatingPoint(tokens[1]) || IsFloatingPoint(tokens[3])) // So thuc.
 		{
-			Qfloat a = Qfloat::FromBin(tokens[1]); // Trich 2 so thuc ra.
-			Qfloat b = Qfloat::FromBin(tokens[3]);
+			Qfloat a(tokens[1]); // Trich 2 so thuc ra.
+			Qfloat b(tokens[3]);
 			outf << Calculate(a, b, tokens[2]).ToBin(); // Tinh ket qua o dang nhi phan roi xuat.
 		}
 		else
